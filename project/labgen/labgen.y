@@ -21,7 +21,7 @@ int yyerror(const char* mess);
 
 
 labyrinthe
-  : suite_instr
+  : suite_instr_vars instr_size suite_instr
 ;
 
 suite_instr
@@ -32,11 +32,9 @@ suite_instr
 instr
   : ';'
   | IDENT '=' expr ';'
-  | SIZE expr ';'
-  | SIZE expr ',' expr ';'
   | IN pt ';'
   | OUT pt suite_pt ';'
-  | SHOW ';'
+  | SHOW
   | IDENT PLUSE expr ';'
   | IDENT MINUSE expr ';'
   | IDENT MULTE expr ';'
@@ -47,9 +45,29 @@ instr
   | constr PTD pt suite_pt_val ';'
   | constr R pt pt ';'
   | constr R F pt pt ';'
-  | constr FOR IDENT suite_ident IN range suite_range pt';'
+  | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
   | MD pt DIR pt dest_list
+;
+
+instr_size
+  : SIZE expr ';'
+  | SIZE expr ',' expr ';'
+;
+
+instr_vars
+  :
+  | IDENT '=' expr ';'
+  | IDENT PLUSE expr ';'
+  | IDENT MINUSE expr ';'
+  | IDENT MULTE expr ';'
+  | IDENT DIVE expr ';'
+  | IDENT MODE expr ';'
+;
+
+suite_instr_vars
+  : suite_instr_vars instr_vars
+  | instr_vars
 ;
 
 expr
@@ -63,7 +81,11 @@ expr
   | '(' expr ')' {$$ = $2;}
   | '+' expr
   | '-' expr
+;
 
+for_args
+  : IDENT IN range
+  | IDENT for_args range
 ;
 
 pt
@@ -107,16 +129,6 @@ constr
   : WALL
   | UNWALL
   | TOGGLE
-;
-
-suite_ident
-  :suite_ident IDENT
-  |
-;
-
-suite_range
-  :suite_range range
-  |
 ;
 
 %%

@@ -25,7 +25,7 @@ TOGGLE {return TOGGLE;}
 \*= { return MULTE;}
 \/= { return DIVE;}
 %= { return MODE;}
---> {return ARROW;}
+(-->|->) {return ARROW;}
 
 ([a-z]|[A-Z])([a-z]|[A-Z]|[0-9])* { return IDENT;}
 
