@@ -27,7 +27,7 @@ TOGGLE {return TOGGLE;}
 %= { return MODE;}
 (-->|->) {return ARROW;}
 
-([a-z]|[A-Z])([a-z]|[A-Z]|[0-9])* { return IDENT;}
+([a-z]|[A-Z])([a-z]|[A-Z]|[0-9])* {yylval.id = strdup(yytext); return IDENT;}
 
 [ \t\n] ;
 

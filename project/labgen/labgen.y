@@ -1,12 +1,48 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 int yylex();
 int yyerror(const char* mess);
 
 int width = -1;
 int height = -1;
 char **labyrinthe;
+
+char **name_var;
+int *value_var;
+int nb_var = 0;
+
+void init(){
+    name_var = calloc(100,sizeof(char *));
+    value_var = calloc(100,sizeof(int));
+}
+int check_var(char* var){
+    int i;
+    int find = 0;
+    int result;
+    for (i = 0 ; i < nb_var && find == 0; i++){
+        if (strcmp(var, name_var[i]) == 0){
+            find = 1;
+            result = value_var[i];
+        }
+    }
+    if (find == 1){
+        return result;
+    }
+    else{
+        printf("Erreur : nom de variable introuvable !\n");
+        exit(1);
+    }
+}
+void add_var(char *var, int value){
+    name_var[nb_var] = calloc(strlen(var),sizeof(char));
+    name_var[nb_var] = var;
+    value_var[nb_var] = value;
+    if (value != check_var(var)){
+        printf("Cette valeur a déjà été ajouté, elle ne sera pas prise en compte\n");
+    }
+}
 void initialize_size(int h, int w){
     if (h < 2 || w < 2){
         printf("Erreur : taille invalide !\n");
@@ -32,8 +68,12 @@ void initialize_size(int h, int w){
 %token PLUSE MINUSE MULTE DIVE MODE
 %token ARROW
 
-%union{int entier;}
+%union{
+    int entier;
+    char *id;
+}
 %type<entier> CNUM expr
+%type<id> IDENT
 
 %left '+' '-'
 %right '*' '/'
@@ -53,15 +93,10 @@ suite_instr
 
 instr
   : ';'
-  | IDENT '=' expr ';'
+  | instr_vars
   | IN pt ';'
   | OUT pt suite_pt ';'
   | SHOW
-  | IDENT PLUSE expr ';'
-  | IDENT MINUSE expr ';'
-  | IDENT MULTE expr ';'
-  | IDENT DIVE expr ';'
-  | IDENT MODE expr ';'
   | constr ';'
   | constr PTA pt suite_pt ';'
   | constr PTD pt suite_pt_val ';'
@@ -78,7 +113,9 @@ instr_size
 ;
 
 instr_vars
-  : IDENT '=' expr ';'
+  : IDENT '=' expr ';' {
+      add_var($1, $3);
+  }
   | IDENT PLUSE expr ';'
   | IDENT MINUSE expr ';'
   | IDENT MULTE expr ';'
@@ -93,7 +130,9 @@ suite_instr_vars
 
 expr
   : CNUM
-  | IDENT
+  | IDENT {
+      $$ = check_var($1);
+  }
   | expr '*' expr {$$ = $1 * $3;}
   | expr '+' expr {$$ = $1 + $3;}
   | expr '-' expr {$$ = $1 - $3;}
