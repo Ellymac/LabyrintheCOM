@@ -26,7 +26,7 @@ labyrinthe
 
 suite_instr
   : suite_instr instr
-  | instr
+  |
 ;
 
 instr
@@ -56,8 +56,7 @@ instr_size
 ;
 
 instr_vars
-  :
-  | IDENT '=' expr ';'
+  : IDENT '=' expr ';'
   | IDENT PLUSE expr ';'
   | IDENT MINUSE expr ';'
   | IDENT MULTE expr ';'
@@ -67,20 +66,20 @@ instr_vars
 
 suite_instr_vars
   : suite_instr_vars instr_vars
-  | instr_vars
+  |
 ;
 
 expr
   : CNUM
   | IDENT
-  | expr '*' expr
-  | expr '+' expr
-  | expr '-' expr
-  | expr '/' expr
-  | expr '%' expr
+  | expr '*' expr {$$ = $1 * $3;}
+  | expr '+' expr {$$ = $1 + $3;}
+  | expr '-' expr {$$ = $1 - $3;}
+  | expr '/' expr {$$ = $1 / $3;}
+  | expr '%' expr {$$ = $1 % $3;}
   | '(' expr ')' {$$ = $2;}
-  | '+' expr
-  | '-' expr
+  | '+' expr {$$ = $2;}
+  | '-' expr {$$ = -$2;}
 ;
 
 for_args
