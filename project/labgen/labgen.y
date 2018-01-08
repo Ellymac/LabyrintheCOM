@@ -3,6 +3,25 @@
 #include <stdlib.h>
 int yylex();
 int yyerror(const char* mess);
+
+int width = -1;
+int height = -1;
+char **labyrinthe;
+void initialize_size(int h, int w){
+    if (h < 2 || w < 2){
+        printf("Erreur : taille invalide !\n");
+        exit(1);
+    }
+    else{
+        width = w;
+        height = h;
+        labyrinthe = calloc(height,sizeof(char *));
+        int i;
+        for (i = 0 ; i < height ; i++){
+            labyrinthe[i] = calloc(width,sizeof(char));
+        }
+    }
+}
 %}
 
 %token IDENT CNUM DIR
@@ -12,6 +31,9 @@ int yyerror(const char* mess);
 %token WH MD
 %token PLUSE MINUSE MULTE DIVE MODE
 %token ARROW
+
+%union{int entier;}
+%type<entier> CNUM expr
 
 %left '+' '-'
 %right '*' '/'
@@ -51,8 +73,8 @@ instr
 ;
 
 instr_size
-  : SIZE expr ';'
-  | SIZE expr ',' expr ';'
+  : SIZE expr ';' {initialize_size($2,$2);}
+  | SIZE expr ',' expr ';' {initialize_size($4,$2);}
 ;
 
 instr_vars

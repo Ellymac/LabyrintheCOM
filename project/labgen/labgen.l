@@ -2,7 +2,7 @@
 %option noyywrap
 
 %%
-[0-9]+ {yylval = atoi(yytext); return CNUM;}
+[0-9]+ {yylval.entier = atoi(yytext); return CNUM;}
 (N|E|S|W|NE|NW|SE|SW) { return DIR;}
 SIZE {return SIZE;}
 IN {return IN;}
