@@ -7,7 +7,13 @@ int yyerror(const char* mess);
 
 int width = -1;
 int height = -1;
+int has_entry = 0;
 char **labyrinthe;
+/**
+- e : entrée
+- s : sortie
+- m : mur
+*/
 
 char **name_var;
 int *value_var;
@@ -51,13 +57,53 @@ void initialize_size(int h, int w){
     else{
         width = w;
         height = h;
-        labyrinthe = calloc(height,sizeof(char *));
+        labyrinthe = calloc(height+1,sizeof(char *));
         int i;
         for (i = 0 ; i < height ; i++){
-            labyrinthe[i] = calloc(width,sizeof(char));
+            labyrinthe[i] = calloc(width+1,sizeof(char));
         }
     }
 }
+
+/**
+TODO ajouter une condition pour vérifier les entrées/sorties
+    des trous de vers
+*/
+void put_in(int h, int w){
+    if (h!=0 && h!=height && w!=0 && w!=width){
+        printf("Erreur : entrée invalide !\n");
+        exit(1);
+    }
+    else if (has_entry == 1){
+        printf("Erreur : entrée déjà présente !\n");
+        exit(1);
+    }
+    else{
+        if (labyrinthe[h][w] == 'm'){
+            printf("Attention : présence d'un mur (supprimé) \n");
+        }
+        labyrinthe[h][w] = 'e';
+        has_entry = 1;
+    }
+}
+
+/**
+TODO ajouter une condition pour vérifier les entrées/sorties
+    des trous de vers
+*/
+void put_out(int h, int w){
+    if (h!=0 && h!=height && w!=0 && w!=width){
+        printf("Erreur : sortie invalide !\n");
+        exit(1);
+    }
+    else{
+        if (labyrinthe[h][w] == 'm'){
+            printf("Attention : présence d'un mur (supprimé) \n");
+        }
+        labyrinthe[h][w] = 's';
+    }
+}
+
 %}
 
 %token IDENT CNUM DIR
@@ -70,10 +116,15 @@ void initialize_size(int h, int w){
 
 %union{
     int entier;
+    int pt[2];
+    int suite_pt[50][2];
     char *id;
 }
 %type<entier> CNUM expr
 %type<id> IDENT
+%type<pt> pt
+%type<suite_pt> suite_pt
+
 
 %left '+' '-'
 %right '*' '/'
@@ -94,11 +145,11 @@ suite_instr
 instr
   : ';'
   | instr_vars
-  | IN pt ';'
-  | OUT pt suite_pt ';'
+  | IN pt ';' {put_in($2[1],$2[0]);}
+  | OUT suite_pt ';'
   | SHOW
   | constr ';'
-  | constr PTA pt suite_pt ';'
+  | constr PTA suite_pt ';'
   | constr PTD pt suite_pt_val ';'
   | constr R pt pt ';'
   | constr R F pt pt ';'
@@ -149,7 +200,7 @@ for_args
 ;
 
 pt
-  : '(' expr ',' expr ')'
+  : '(' expr ',' expr ')' {$$[0] = $2; $$[1] = $4;}
 ;
 
 range
@@ -159,9 +210,12 @@ range
   |'[' expr ':' expr ':' expr '['
 ;
 
+/**
+TODO finir suite_pt
+*/
 suite_pt
   : suite_pt pt
-  |
+  | pt {$$[0][0] = $1[0]; $$[0][1] = $1[1];}
 ;
 
 suite_pt_val
