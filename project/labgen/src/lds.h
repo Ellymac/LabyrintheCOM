@@ -10,6 +10,7 @@
 /*======================================================================*/
 
 #include "points.h"
+#include "top.h"
 
 /*======================================================================*/
 /*= Tuning and Constants                                               =*/
@@ -59,7 +60,7 @@ struct _Tlds {
                // and squares[dx-1][0] belongs to the labyrinth.
     Tsquare squares[LDS_SIZE][LDS_SIZE]; // the labyrinth
     Tpoint  in; // the labyrinth input
-};
+} ;
 
 /*======================================================================*/
 /*= constructor/destructor                                             =*/

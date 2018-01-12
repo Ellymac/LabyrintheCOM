@@ -3,23 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "src/points.h"
+#include "src/lds.h"
 
 int yylex();
-int yyerror(const char* mess);
 
-int width = -1;
-int height = -1;
 int has_entry = 0;
-char **labyrinthe;
-/**
-- e : entrée
-- s : sortie
-- m : mur
-*/
-
-char **name_var;
-int *value_var;
-int nb_var = 0;
+Tlds *labyrinthe;
 
 Tpoint* init_pt(int x, int y){
     Tpoint* res = malloc(sizeof(struct _Tpoint));
@@ -33,12 +22,18 @@ void initialize_size(int h, int w){
         exit(1);
     }
     else{
-        width = w;
-        height = h;
-        labyrinthe = calloc(height+1,sizeof(char *));
-        int i;
-        for (i = 0 ; i < height ; i++){
-            labyrinthe[i] = calloc(width+1,sizeof(char));
+      /** à réfléchir tout à l'heure */
+        labyrinthe = lds_new();
+        labyrinthe->dx = w;
+        labyrinthe->dy = h;
+        int i,j;
+        for (i = 0 ; i < h ; i++){
+            for (j = 0 ; j < w ; j++){
+                Tsquare sq;
+                sq.kind = LDS_FREE;
+                sq.opt = LDS_OptNone;
+                labyrinthe->squares[j][i] = sq;
+            }
         }
     }
 }
@@ -48,7 +43,7 @@ TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
 void put_in(int h, int w){
-    if (h!=0 && h!=height && w!=0 && w!=width){
+    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
         printf("Erreur : entrée invalide !\n");
         exit(1);
     }
@@ -57,10 +52,14 @@ void put_in(int h, int w){
         exit(1);
     }
     else{
-        if (labyrinthe[h][w] == 'm'){
+        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        labyrinthe[h][w] = 'e';
+        (labyrinthe->squares[h][w]).kind = LDS_IN;
+        Tpoint pt;
+        pt.x = w;
+        pt.y = h;
+        labyrinthe->in = pt;
         has_entry = 1;
     }
 }
@@ -70,15 +69,15 @@ TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
 void put_out(int h, int w){
-    if (h!=0 && h!=height && w!=0 && w!=width){
+    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
         printf("Erreur : sortie invalide !\n");
         exit(1);
     }
     else{
-        if (labyrinthe[h][w] == 'm'){
+        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        labyrinthe[h][w] = 's';
+        (labyrinthe->squares[h][w]).kind = LDS_OUT;
     }
 }
 
@@ -105,10 +104,12 @@ void fill_out(Tpoints *suite){
     int entier;
     Tpoint *pt;
     Tpoints *suite_pt;
+    Tpoint3s *suite_pt_val;
 }
 %type<entier> CNUM expr
 %type<pt> pt
 %type<suite_pt> suite_pt
+%type<suite_pt_val> suite_pt_val pt_val
 
 %left '+' '-'
 %right '*' '/'
@@ -196,14 +197,30 @@ suite_pt
 ;
 
 suite_pt_val
-  : suite_pt_val pt_val
-  |
+  : suite_pt_val pt_val {
+      int i;
+      for (i = 0 ; i < $2->nb ; i++){
+          pt3s_app_pt3($1,$2->t[i]);
+      }
+      pt3s_free($2);
+      $$ = $1;
+  }
+  | {}
 ;
-
+/**
+On définit un pt_val comme un Tpoint3s
+(avec z==0 si ce n'est pas une étoile et z==1 sinon)
+**/
 pt_val
-  : pt
-  | pt ':' expr
-  | pt ':' '*'
+  : pt {$$ = pt3s_new_p2z(*$1,0);}
+  | pt ':' expr {
+      $$ = pt3s_new();
+      int i;
+      for (i = 0 ; i < $3 ; i++){
+          pt3s_app_p2z($$, *$1,0);
+      }
+  }
+  | pt ':' '*' {$$ = pt3s_new_p2z(*$1,1);}
 ;
 
 pt_arrow
@@ -225,8 +242,8 @@ constr
 %%
 #include "lex.yy.c"
 
-int yyerror(const char* mess)
+void yyerror(const char* fmt, ...)
 {
-    fprintf(stderr,"FATAL (line %d): %s (near %s)\n",yylineno,mess,yytext);
+    fprintf(stderr,"FATAL (line %d): %s (near %s)\n",yylineno,fmt,yytext);
     exit(1);
 }
