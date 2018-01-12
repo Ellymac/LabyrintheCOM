@@ -59,12 +59,12 @@ void initialize_size(int h, int w){
         labyrinthe->dx = w;
         labyrinthe->dy = h;
         int i,j;
-        for (i = 0 ; i < h ; i++){
-            for (j = 0 ; j < w ; j++){
+        for (i = 0 ; i < h+1 ; i++){
+            for (j = 0 ; j < w+1 ; j++){
                 Tsquare sq;
                 sq.kind = LDS_FREE;
                 sq.opt = LDS_OptNone;
-                labyrinthe->squares[j][i] = sq;
+                labyrinthe->squares[i][j] = sq;
             }
         }
     }
@@ -123,7 +123,9 @@ void fill_out(Tpoints *suite){
         put_out(a.y,a.x);
     }
 }
-
+void show(){
+    lds_dump(labyrinthe,stdout);
+}
 %}
 
 %token IDENT CNUM DIR
