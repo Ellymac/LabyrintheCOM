@@ -2,53 +2,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "src/top.h"
+#include "src/vars.h"
 int yylex();
-int yyerror(const char* mess);
 
 int width = -1;
 int height = -1;
 int has_entry = 0;
 char **labyrinthe;
-/**
-- e : entrée
-- s : sortie
-- m : mur
-*/
+Tvars* vars;
 
-char **name_var;
-int *value_var;
-int nb_var = 0;
-
-void init(){
-    name_var = calloc(100,sizeof(char *));
-    value_var = calloc(100,sizeof(int));
+/* Init vars set */
+void init_vars() {
+  vars = vars_new();
 }
+
+/* Check if var exists in vars */
 int check_var(char* var){
-    int i;
-    int find = 0;
-    int result;
-    for (i = 0 ; i < nb_var && find == 0; i++){
-        if (strcmp(var, name_var[i]) == 0){
-            find = 1;
-            result = value_var[i];
-        }
-    }
-    if (find == 1){
-        return result;
+    Tvar* found;
+    // if var exists
+    if ((found = vars_getR(vars, var)) != 0){
+        return found->val;
     }
     else{
         printf("Erreur : nom de variable introuvable !\n");
         exit(1);
     }
 }
+
+/* Create a Tvar with var and its value, adds the Tvar to vars. TODO cloned avec Cstr ? */
 void add_var(char *var, int value){
-    name_var[nb_var] = calloc(strlen(var),sizeof(char));
-    name_var[nb_var] = var;
-    value_var[nb_var] = value;
-    if (value != check_var(var)){
-        printf("Cette valeur a déjà été ajouté, elle ne sera pas prise en compte\n");
-    }
+    // create var
+    Tvar* v = var_new(var, value);
+    // add var to set of vars
+    vars_chgOrAddEated(vars, var, value);
 }
+
+/* Initialize labyrinth's size */
 void initialize_size(int h, int w){
     if (h < 2 || w < 2){
         printf("Erreur : taille invalide !\n");
@@ -65,7 +55,8 @@ void initialize_size(int h, int w){
     }
 }
 
-/**
+/*
+  Define entry
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
@@ -87,7 +78,8 @@ void put_in(int h, int w){
     }
 }
 
-/**
+/*
+  Define output
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
@@ -118,7 +110,7 @@ void put_out(int h, int w){
     int entier;
     int pt[2];
     int suite_pt[50][2];
-    char *id;
+    Cstr id;
 }
 %type<entier> CNUM expr
 %type<id> IDENT
@@ -165,7 +157,7 @@ instr_size
 
 instr_vars
   : IDENT '=' expr ';' {
-      add_var($1, $3);
+      add_var(u_strdup($1),$3);
   }
   | IDENT PLUSE expr ';'
   | IDENT MINUSE expr ';'
@@ -182,7 +174,7 @@ suite_instr_vars
 expr
   : CNUM
   | IDENT {
-      $$ = check_var($1);
+    $$ = check_var(u_strdup($1));
   }
   | expr '*' expr {$$ = $1 * $3;}
   | expr '+' expr {$$ = $1 + $3;}
@@ -248,7 +240,7 @@ constr
 %%
 #include "lex.yy.c"
 
-int yyerror(const char* mess)
+void yyerror(const char* mess, ...)
 {
     fprintf(stderr,"FATAL (line %d): %s (near %s)\n",yylineno,mess,yytext);
     exit(1);

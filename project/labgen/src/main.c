@@ -83,6 +83,7 @@ int main(int argc, char*argv[])
     gl_lds = lds_new();
 
     // parsing
+    init_vars(); // init vars set
     extern FILE* yyin;
     yyin = param.instream;
     if ( yyparse() )
