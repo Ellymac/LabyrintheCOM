@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "src/points.h"
+
 int yylex();
 int yyerror(const char* mess);
 
@@ -19,35 +21,11 @@ char **name_var;
 int *value_var;
 int nb_var = 0;
 
-void init(){
-    name_var = calloc(100,sizeof(char *));
-    value_var = calloc(100,sizeof(int));
-}
-int check_var(char* var){
-    int i;
-    int find = 0;
-    int result;
-    for (i = 0 ; i < nb_var && find == 0; i++){
-        if (strcmp(var, name_var[i]) == 0){
-            find = 1;
-            result = value_var[i];
-        }
-    }
-    if (find == 1){
-        return result;
-    }
-    else{
-        printf("Erreur : nom de variable introuvable !\n");
-        exit(1);
-    }
-}
-void add_var(char *var, int value){
-    name_var[nb_var] = calloc(strlen(var),sizeof(char));
-    name_var[nb_var] = var;
-    value_var[nb_var] = value;
-    if (value != check_var(var)){
-        printf("Cette valeur a déjà été ajouté, elle ne sera pas prise en compte\n");
-    }
+Tpoint* init_pt(int x, int y){
+    Tpoint* res = malloc(sizeof(struct _Tpoint));
+    res->x = x;
+    res->y = y;
+    return res;
 }
 void initialize_size(int h, int w){
     if (h < 2 || w < 2){
@@ -104,6 +82,15 @@ void put_out(int h, int w){
     }
 }
 
+void fill_out(Tpoints *suite){
+    int n = suite->nb;
+    int i;
+    for (i = 0; i<n; i++){
+        Tpoint a = suite->t[i];
+        put_out(a.y,a.x);
+    }
+}
+
 %}
 
 %token IDENT CNUM DIR
@@ -116,15 +103,12 @@ void put_out(int h, int w){
 
 %union{
     int entier;
-    int pt[2];
-    int suite_pt[50][2];
-    char *id;
+    Tpoint *pt;
+    Tpoints *suite_pt;
 }
 %type<entier> CNUM expr
-%type<id> IDENT
 %type<pt> pt
 %type<suite_pt> suite_pt
-
 
 %left '+' '-'
 %right '*' '/'
@@ -145,8 +129,8 @@ suite_instr
 instr
   : ';'
   | instr_vars
-  | IN pt ';' {put_in($2[1],$2[0]);}
-  | OUT suite_pt ';'
+  | IN pt ';'  {put_in($2->y,$2->x);}
+  | OUT suite_pt ';' {fill_out($2);}
   | SHOW
   | constr ';'
   | constr PTA suite_pt ';'
@@ -164,9 +148,7 @@ instr_size
 ;
 
 instr_vars
-  : IDENT '=' expr ';' {
-      add_var($1, $3);
-  }
+  : IDENT '=' expr ';'
   | IDENT PLUSE expr ';'
   | IDENT MINUSE expr ';'
   | IDENT MULTE expr ';'
@@ -181,9 +163,7 @@ suite_instr_vars
 
 expr
   : CNUM
-  | IDENT {
-      $$ = check_var($1);
-  }
+  | IDENT
   | expr '*' expr {$$ = $1 * $3;}
   | expr '+' expr {$$ = $1 + $3;}
   | expr '-' expr {$$ = $1 - $3;}
@@ -200,7 +180,7 @@ for_args
 ;
 
 pt
-  : '(' expr ',' expr ')' {$$[0] = $2; $$[1] = $4;}
+  : '(' expr ',' expr ')' {$$ = init_pt($2,$4);}
 ;
 
 range
@@ -210,12 +190,9 @@ range
   |'[' expr ':' expr ':' expr '['
 ;
 
-/**
-TODO finir suite_pt
-*/
 suite_pt
-  : suite_pt pt
-  | pt {$$[0][0] = $1[0]; $$[0][1] = $1[1];}
+  : suite_pt pt {pts_app_pt($1, *$2); $$ = $1;}
+  | pt {$$ = pts_new_pt(*$1);}
 ;
 
 suite_pt_val
