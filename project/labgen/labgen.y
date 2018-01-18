@@ -169,6 +169,33 @@ void operation(char* var, int value, int opNb) {
   vars_chgOrAddEated(vars, var, newVal);
 }
 
+/* Defines a magic door */
+void define_md(Tpoint src, Tpoint dst, Twr dir) {
+  Tsqmd* md = lds_sqmd_new(src);
+  md->t[dir].chg = 0;
+  md->t[dir].wrd = dir;
+  md->t[dir].dest = dst;
+  labyrinthe->squares[src.x][src.y].opt = LDS_OptMD;
+  labyrinthe->squares[src.x][src.y].sq_mdp = md;
+}
+
+/* Draws in a square if not an input or output */
+void update_square(Tlds* labyrinthe,TsquareOpt newOpt,int x,int y) {
+  TsquareKind kind = labyrinthe->squares[x][y].kind;
+  TsquareOpt opt = labyrinthe->squares[x][y].opt;
+
+  if(kind == LDS_IN)
+    printf("(%d,%d) is an input. Can't put a wall here.\n",x,y);
+  else if (kind == LDS_OUT)
+    printf("(%d,%d) is an output. Can't put a wall here.\n",x,y);
+  else if (opt == LDS_OptMD)
+    printf("(%d,%d) is a magic door. Can't put a wall here.\n",x,y);
+  else if (opt == LDS_OptWH)
+    printf("(%d,%d) is a magic door. Can't put a wall here.\n",x,y);
+  else
+    lds_draw_xy(labyrinthe,newOpt,x,y);
+}
+
 %}
 
 %token IDENT CNUM DIR
@@ -186,10 +213,12 @@ void operation(char* var, int value, int opNb) {
     Tpoint *pt;
     Tpoints *suite_pt;
     Tpoint3s *suite_pt_val;
+    Twr dir;
 }
 %type<entier> CNUM xcst
 /*%type<expr> expr*/
 %type<id> IDENT
+%type<dir> DIR
 %type<pt> pt
 %type<suite_pt> suite_pt
 %type<suite_pt_val> suite_pt_val pt_val
@@ -216,14 +245,21 @@ instr
   | IN pt ';'  {put_in($2->y,$2->x);}
   | OUT suite_pt ';' {fill_out($2);}
   | SHOW {show_lab();}
-  | constr ';'
+  | constr ';' {
+    int x,y;
+    for(x=0;x < labyrinthe->dx;x++) {
+      for(y=0;y < labyrinthe->dy;y++) {
+        update_square(labyrinthe,LG_DrawWall,x,y);
+      }
+    }
+  }
   | constr PTA suite_pt ';'
   | constr PTD pt suite_pt_val ';'
   | constr R pt pt ';'
   | constr R F pt pt ';'
   | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
-  | MD pt DIR pt dest_list
+  | MD pt DIR pt dest_list { define_md(*$2,*$4,$3); }
 ;
 
 instr_size
@@ -340,7 +376,7 @@ pt_arrow
 
 dest_list
   : dest_list DIR pt
-  |
+  | DIR pt
 ;
 
 constr
