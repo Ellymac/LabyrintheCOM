@@ -197,8 +197,6 @@ void update_square_pt(Tlds* labyrinthe,TdrawOpt newOpt,Tpoint pt) {
   update_square_xy(labyrinthe, newOpt, pt.x, pt.y);
 }
 
-
-
 void show(Tlds *labyrinthe){
     lds_dump(labyrinthe,stdout);
 }
