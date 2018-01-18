@@ -120,7 +120,6 @@ void fill_out(Tlds *labyrinthe, Tpoints *suite){
     int i;
     for (i = 0; i<n; i++){
         Tpoint a = suite->t[i];
-        printf("%d%d",a.x,a.y);
         put_out(labyrinthe, a.x,a.y);
     }
 }
@@ -164,11 +163,21 @@ void operation(char* var, int value, int opNb) {
 }
 
 /* Defines a magic door */
-void define_md(Tlds* labyrinthe, Tpoint src, Tpoint dst, Twr dir) {
+void define_md(Tlds* labyrinthe, Tpoint src, listTsqmEle *list_TsqmEle) {
   Tsqmd* md = lds_sqmd_new(src);
-  md->t[dir].chg = 0;
-  md->t[dir].wrd = dir;
-  md->t[dir].dest = dst;
+  int nb = list_TsqmEle->nb;
+  int i;
+  printf("taille md : %d\n",nb);
+  for (i = 0 ; i<nb ; i++){
+      printf("type : %d\n",list_TsqmEle->t[i].wrd);
+      printf("(%d,%d)\n",list_TsqmEle->t[i].dest.x,list_TsqmEle->t[i].dest.y);
+      md->t[list_TsqmEle->t[i].wrd].chg = 0;
+      md->t[list_TsqmEle->t[i].wrd].wrd = list_TsqmEle->t[i].wrd;
+      md->t[list_TsqmEle->t[i].wrd].dest = list_TsqmEle->t[i].dest;
+      printf("type : %d\n",md->t[list_TsqmEle->t[i].wrd].wrd);
+      printf("(%d,%d)\n",md->t[list_TsqmEle->t[i].wrd].dest.x,md->t[list_TsqmEle->t[i].wrd].dest.y);
+
+  }
   labyrinthe->squares[src.x][src.y].opt = LDS_OptMD;
   labyrinthe->squares[src.x][src.y].sq_mdp = md;
 }
@@ -213,6 +222,7 @@ void show(Tlds *labyrinthe){
     Tpoints *suite_pt;
     Tpoint3s *suite_pt_val;
     Twr dir;
+    listTsqmEle *list_TsqmEle;
 }
 %type<entier> CNUM xcst
 /*%type<expr> expr*/
@@ -221,6 +231,7 @@ void show(Tlds *labyrinthe){
 %type<pt> pt
 %type<suite_pt> suite_pt
 %type<suite_pt_val> suite_pt_val pt_val
+%type<list_TsqmEle> dest_list
 
 %left '+' '-'
 %right '*' '/'
@@ -246,9 +257,9 @@ instr
   | SHOW {show(ds);}
   | constr ';' {
     int x,y;
-    for(x=0;x < labyrinthe->dx;x++) {
-      for(y=0;y < labyrinthe->dy;y++) {
-        update_square(labyrinthe,LG_DrawWall,x,y);
+    for(x=0;x < ds->dx;x++) {
+      for(y=0;y < ds->dy;y++) {
+        update_square(ds,LG_DrawWall,x,y);
       }
     }
   }
@@ -258,7 +269,7 @@ instr
   | constr R F pt pt ';'
   | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
-  | MD pt DIR pt dest_list { define_md(ds,*$2,*$4,$3); }
+  | MD pt dest_list { define_md(ds,*$2,$3); }
 ;
 
 instr_size
@@ -374,8 +385,25 @@ pt_arrow
 ;
 
 dest_list
-  : dest_list DIR pt
-  | DIR pt
+  : dest_list DIR pt {
+      $$ = malloc(sizeof(struct _listTsqmEle));
+      TsqmdEle l;
+      l.chg = 0;
+      l.wrd = $2;
+      l.dest = *$3;
+      $1->t[$1->nb] = l;
+      $1->nb += 1;
+      $$ = $1;
+  }
+  | DIR pt {
+    $$ = malloc(sizeof(struct _listTsqmEle));
+    TsqmdEle l;
+    l.chg = 0;
+    l.wrd = $1;
+    l.dest = *$2;
+    $$->t[0] = l;
+    $$->nb = 1;
+  }
 ;
 
 constr

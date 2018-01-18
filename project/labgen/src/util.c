@@ -185,14 +185,12 @@ extern char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir){
             }
         }
     }
-    printf("%s : %s\n",dir, line);
     return line;
 }
 
 extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
 {
     define_direction();
-    printf("%s",dir_tab[0]);
     make_lex(lstream);
     char *deb = "#define STATUS_GOOD 0\n\nstatic const char* infname;\n%}\n%token TK_ERROR TK_EOF\n%token TK_N  TK_S  TK_E  TK_W\n%token TK_NE TK_NW TK_SE TK_SW\n\n%start sortie\n\n%%\n";
     if (-1 == fwrite(deb, strlen(deb), 1,ystream)){
@@ -213,12 +211,10 @@ extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
     free(y_e);
     int x = ds->dx;
     int y = ds->dy;
-    printf("%d,%d",x,y);
     int i,j;
     for (i = 0 ; i < x ; i++){
         for (j = 0 ; j < y ; j++){
                 char *dir_str = direction(ds,i,j);
-                printf("(%d,%d) : %s\n",i,j,dir_str);
                 if (strcmp("",dir_str) == 0){
 
                 }
