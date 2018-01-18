@@ -12,6 +12,7 @@
 #include <stdarg.h>
 
 #include "top.h"
+#include "lds.h"
 
 /*======================================================================*/
 
@@ -66,16 +67,16 @@ extern void u_warning(const char*fmt,...) // like printf, return always 1
     fprintf(stderr,"%s: %s\n",gl_progname,buf);
 }
 
-void make_lex(FILE* lstream){
-  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n<<EOF>>    { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %%s-near %s-\n\",\n          infname,yylineno,mess,yytext);\n  exit(1);\n}";
+extern void make_lex(FILE* lstream){
+  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n    { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %%s-near %s-\n\",\n          infname,yylineno,mess,yytext);\n  exit(1);\n}";
   if (-1 == fwrite(lex, strlen(lex), 1,lstream)){
       fprintf(stderr,"Fail with write");
       exit(1);
   }
 }
 
-char* int_case_to_string(int x){
-    char *result = malloc(3*sizeof(char));
+extern char* int_case_to_string(int x){
+    char *result = calloc(10,sizeof(char));
     if (x<10){
         sprintf(result,"00%d",x);
     }
@@ -87,24 +88,32 @@ char* int_case_to_string(int x){
     }
     return result;
 }
-char *dir_tab[8];
-dir_tab[0] = "TK_N";
-dir_tab[1] = "TK_NE";
-dir_tab[2] = "TK_E";
-dir_tab[3] = "TK_SE";
-dir_tab[4] = "TK_S";
-dir_tab[5] = "TK_SW";
-dir_tab[6] = "TK_W";
-dir_tab[7] = "TK_NW";
+char **dir_tab;
 
-char* direction(Tlds*ds, int x, int y){
-    char *line = malloc(400*sizeof(char));
+extern void define_direction(){
+    dir_tab = calloc(8,sizeof(char *));
+    int i;
+    for (i = 0 ; i<8 ; i++){
+        dir_tab[i] = calloc(5,sizeof(char));
+    }
+    dir_tab[0] = "TK_N";
+    dir_tab[1] = "TK_NE";
+    dir_tab[2] = "TK_E";
+    dir_tab[3] = "TK_SE";
+    dir_tab[4] = "TK_S";
+    dir_tab[5] = "TK_SW";
+    dir_tab[6] = "TK_W";
+    dir_tab[7] = "TK_NW";
+}
+
+extern char* direction(Tlds*ds, int x, int y){
+    char *line = calloc(400,sizeof(char));
     char *x_str;
     char *y_str;
     x_str = int_case_to_string(x);
     y_str = int_case_to_string(y);
     sprintf(line,"SQ_%s_%s :",x_str,y_str);
-    Tsquare ts = ds->square[x][y];
+    Tsquare ts = ds->squares[x][y];
     if (ts.opt == LDS_OptMD){
 
     }
@@ -112,40 +121,40 @@ char* direction(Tlds*ds, int x, int y){
         int i;
         char *tmp;
         tmp = direction_aux(ds,x,y-1,dir_tab[0]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x+1,y-1,dir_tab[1]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x+1,y,dir_tab[2]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x+1,y+1,dir_tab[3]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x,y+1,dir_tab[4]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x-1,y+1,dir_tab[5]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x-1,y,dir_tab[6]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
         tmp = direction_aux(ds,x-1,y-1,dir_tab[7]);
-        if (strcmp(tmp,"") == 0){
+        if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
     }
     int nb = strlen(line);
-    if (line[nb-1] != ':'){
+    if (line[nb-1] == ':'){
       return "";
     }
     else{
@@ -153,12 +162,12 @@ char* direction(Tlds*ds, int x, int y){
         return line;
     }
 }
-char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir){
+extern char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir){
     char *x_str;
     char *y_str;
-    char *line = malloc(20*sizeof(char));
+    char *line = calloc(20,sizeof(char));
     if (lds_check_xy(ds,new_x,new_y) == 0){
-        Tsquare ts = ds->square[new_x][new_y];
+        Tsquare ts = ds->squares[new_x][new_y];
         if (ts.kind != LDS_WALL){
             if (ts.opt == LDS_OptWH){
                 x_str = int_case_to_string(ts.u.whdest.x);
@@ -176,11 +185,14 @@ char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir){
             }
         }
     }
+    printf("%s : %s\n",dir, line);
     return line;
 }
 
 extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
 {
+    define_direction();
+    printf("%s",dir_tab[0]);
     make_lex(lstream);
     char *deb = "#define STATUS_GOOD 0\n\nstatic const char* infname;\n%}\n%token TK_ERROR TK_EOF\n%token TK_N  TK_S  TK_E  TK_W\n%token TK_NE TK_NW TK_SE TK_SW\n\n%start sortie\n\n%%\n";
     if (-1 == fwrite(deb, strlen(deb), 1,ystream)){
@@ -190,7 +202,7 @@ extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
     Tpoint entree = ds->in;
     char *x_e = int_case_to_string(entree.x);
     char *y_e = int_case_to_string(entree.y);
-    char *entree_str = malloc(400*sizeof(char));
+    char *entree_str = calloc(400,sizeof(char));
     sprintf(entree_str,"sortie : SG_%s_%s { return STATUS_GOOD; };\n",x_e,y_e);
     if (-1 == fwrite(entree_str, strlen(entree_str), 1,ystream)){
         fprintf(stderr,"Fail with write");
@@ -201,23 +213,32 @@ extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
     free(y_e);
     int x = ds->dx;
     int y = ds->dy;
+    printf("%d,%d",x,y);
     int i,j;
     for (i = 0 ; i < x ; i++){
         for (j = 0 ; j < y ; j++){
                 char *dir_str = direction(ds,i,j);
-                if (strcmp("",dir_str)){
+                printf("(%d,%d) : %s\n",i,j,dir_str);
+                if (strcmp("",dir_str) == 0){
 
                 }
                 else{
-                    sprintf(dir_str,"%s\n",dir_str);
+                    dir_str = strcat(dir_str,"\n");
                     if (-1 == fwrite(dir_str, strlen(dir_str), 1,ystream)){
                         fprintf(stderr,"Fail with write");
                         exit(1);
                     }
                 }
-            }
         }
     }
+    char *fin_yacc = "%%\n#include \"labres.lex.c\"\nint main(int argc, char*argv[])\n{\nint status;\nif ( argc==1 )\ninfname=strdup(\"stdin\");\nelse if ( argc==2 ) {\nchar *p = strdup(argv[1]);\ninfname = strdup(basename(p));\nfree(p);\nif ( (yyin=fopen(argv[1],\"r\"))==0 ) {\nfprintf(stderr,\"%s: can not open %s file for reading: %s\\n\",\nargv[0],infname,strerror(errno));\nexit(1);\n}\n} else {\nfprintf(stderr,\"%s: to many arguments. usage: %s if\\n\",\nargv[0],argv[0]);\nexit(1);\n}\nstatus = yyparse();\nprintf(\"%s\\n\",\nstatus==STATUS_GOOD ? \"gagné\" : \"perdu\");\nfree((char*)infname);\nexit(0);\n}";
+    if (-1 == fwrite(fin_yacc, strlen(fin_yacc), 1,ystream)){
+        fprintf(stderr,"Fail with write");
+        exit(1);
+    }
+
+
+  return 0;
 
 }
 

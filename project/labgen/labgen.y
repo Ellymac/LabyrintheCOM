@@ -12,7 +12,6 @@ int yylex();
 
 int has_entry = 0;
 Tvars* vars;
-Tlds *labyrinthe;
 
 /* Init vars set */
 void init_vars() {
@@ -49,16 +48,15 @@ Tpoint* init_pt(int x, int y){
 }
 
 /* Initialize labyrinth's size */
-void initialize_size(int x, int y){
+void initialize_size(Tlds *labyrinthe, int x, int y){
     if (x < 2 || y < 2){
         printf("Erreur : taille invalide !\n");
         exit(1);
     }
     else{
       /** à réfléchir tout à l'heure */
-        labyrinthe = lds_new();
-        labyrinthe->dx = x;
-        labyrinthe->dy = y;
+        labyrinthe->dx = x+1;
+        labyrinthe->dy = y+1;
         int i,j;
         for (i = 0 ; i < x ; i++){
             for (j = 0 ; j < y ; j++){
@@ -76,7 +74,7 @@ void initialize_size(int x, int y){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_in(int x, int y){
+void put_in(Tlds *labyrinthe, int x, int y){
     if (x!=0 && x!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : entrée invalide !\n");
         exit(1);
@@ -103,8 +101,8 @@ void put_in(int x, int y){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_out(int x, int y){
-    if (x!=0 && y!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
+void put_out(Tlds *labyrinthe, int x, int y){
+    if (x!=0 && x!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : sortie invalide !\n");
         exit(1);
     }
@@ -117,12 +115,13 @@ void put_out(int x, int y){
 }
 
 /* Fill multiple outputs */
-void fill_out(Tpoints *suite){
+void fill_out(Tlds *labyrinthe, Tpoints *suite){
     int n = suite->nb;
     int i;
     for (i = 0; i<n; i++){
         Tpoint a = suite->t[i];
-        put_out(a.x,a.y);
+        printf("%d%d",a.x,a.y);
+        put_out(labyrinthe, a.x,a.y);
     }
 }
 
@@ -164,10 +163,12 @@ void operation(char* var, int value, int opNb) {
   vars_chgOrAddEated(vars, var, newVal);
 }
 
-void show(){
+void show(Tlds *labyrinthe){
     lds_dump(labyrinthe,stdout);
 }
 %}
+
+%parse-param {Tlds *ds}
 
 %token IDENT CNUM DIR
 %token SIZE IN OUT SHOW
@@ -211,9 +212,9 @@ suite_instr
 instr
   : ';'
   | instr_vars
-  | IN pt ';'  {put_in($2->x,$2->y);}
-  | OUT suite_pt ';' {fill_out($2);}
-  | SHOW {show();}
+  | IN pt ';'  {put_in(ds,$2->x,$2->y);}
+  | OUT suite_pt ';' {fill_out(ds,$2);}
+  | SHOW {show(ds);}
   | constr ';'
   | constr PTA suite_pt ';'
   | constr PTD pt suite_pt_val ';'
@@ -225,8 +226,8 @@ instr
 ;
 
 instr_size
-  : SIZE expr ';' {initialize_size($2,$2);}
-  | SIZE expr ',' expr ';' {initialize_size($2,$4);}
+  : SIZE xcst ';' {initialize_size(ds,$2,$2);}
+  | SIZE xcst ',' xcst ';' {initialize_size(ds,$2,$4);}
 ;
 
 instr_vars
@@ -350,7 +351,7 @@ constr
 %%
 #include "lex.yy.c"
 
-void yyerror(const char* fmt, ...)
+void yyerror(Tlds *ds, const char* fmt, ...)
 {
     fprintf(stderr,"FATAL (line %d): %s (near %s)\n",yylineno,fmt,yytext);
     exit(1);
