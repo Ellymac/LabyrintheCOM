@@ -8,6 +8,9 @@
 #include "src/points.h"
 #include "src/lds.h"
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 int yylex();
 
 int has_entry = 0;
@@ -183,7 +186,7 @@ void define_md(Tlds* labyrinthe, Tpoint src, listTsqmEle *list_TsqmEle) {
 }
 
 /* Draws in a square if not an input or output */
-void update_square(Tlds* labyrinthe,TsquareOpt newOpt,int x,int y) {
+void update_square_xy(Tlds* labyrinthe,TdrawOpt newOpt,int x,int y) {
   TsquareKind kind = labyrinthe->squares[x][y].kind;
   TsquareOpt opt = labyrinthe->squares[x][y].opt;
 
@@ -197,6 +200,11 @@ void update_square(Tlds* labyrinthe,TsquareOpt newOpt,int x,int y) {
     printf("(%d,%d) is a magic door. Can't put a wall here.\n",x,y);
   else
     lds_draw_xy(labyrinthe,newOpt,x,y);
+}
+
+/* Draws in a square if not an input or output */
+void update_square_pt(Tlds* labyrinthe,TdrawOpt newOpt,Tpoint pt) {
+  update_square_xy(labyrinthe, newOpt, pt.x, pt.y);
 }
 
 void show(Tlds *labyrinthe){
@@ -221,6 +229,7 @@ void show(Tlds *labyrinthe){
     Tpoint *pt;
     Tpoints *suite_pt;
     Tpoint3s *suite_pt_val;
+    TdrawOpt constr;
     Twr dir;
     listTsqmEle *list_TsqmEle;
 }
@@ -232,6 +241,7 @@ void show(Tlds *labyrinthe){
 %type<suite_pt> suite_pt
 %type<suite_pt_val> suite_pt_val pt_val
 %type<list_TsqmEle> dest_list
+%type<constr> constr
 
 %left '+' '-'
 %right '*' '/'
@@ -257,15 +267,29 @@ instr
   | SHOW {show(ds);}
   | constr ';' {
     int x,y;
-    for(x=0;x < ds->dx;x++) {
-      for(y=0;y < ds->dy;y++) {
-        update_square(ds,LG_DrawWall,x,y);
+    for(x = 0; x < ds->dx; x++) {
+      for(y = 0; y < ds->dy; y++) {
+        update_square_xy(ds,$1,x,y);
       }
     }
   }
-  | constr PTA suite_pt ';'
+  | constr PTA suite_pt ';' { lds_draw_pts(ds, $1, $3); }
   | constr PTD pt suite_pt_val ';'
-  | constr R pt pt ';'
+  | constr R pt pt ';' {
+    Tpoint min = (Tpoint){MIN($3->x, $4->x), MIN($3->y, $4->y)};
+    Tpoint max = (Tpoint){MAX($3->x, $4->x), MAX($3->y, $4->y)};
+
+    int i;
+    for(i = min.x; i < max.x; i++) {
+      lds_draw_xy(ds, $1, i, min.y);
+      lds_draw_xy(ds, $1, i, max.y);
+    }
+
+    for(i = min.y; i < max.y; i++) {
+      lds_draw_xy(ds, $1, min.x, i);
+      lds_draw_xy(ds, $1, max.x, i);
+    }
+  }
   | constr R F pt pt ';'
   | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
@@ -407,9 +431,9 @@ dest_list
 ;
 
 constr
-  : WALL
-  | UNWALL
-  | TOGGLE
+  : WALL { $$ = LG_DrawWall; }
+  | UNWALL { $$ = LG_DrawUnwall; }
+  | TOGGLE { $$ = LG_DrawToggle; }
 ;
 
 %%
