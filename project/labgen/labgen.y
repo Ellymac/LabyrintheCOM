@@ -12,7 +12,6 @@ int yylex();
 
 int has_entry = 0;
 Tvars* vars;
-Tlds *labyrinthe;
 
 /* Init vars set */
 void init_vars() {
@@ -49,23 +48,22 @@ Tpoint* init_pt(int x, int y){
 }
 
 /* Initialize labyrinth's size */
-void initialize_size(int h, int w){
-    if (h < 2 || w < 2){
+void initialize_size(Tlds *labyrinthe, int x, int y){
+    if (x < 2 || y < 2){
         printf("Erreur : taille invalide !\n");
         exit(1);
     }
     else{
       /** à réfléchir tout à l'heure */
-        labyrinthe = lds_new();
-        labyrinthe->dx = w;
-        labyrinthe->dy = h;
+        labyrinthe->dx = x+1;
+        labyrinthe->dy = y+1;
         int i,j;
-        for (i = 0 ; i < h+1 ; i++){
-            for (j = 0 ; j < w+1 ; j++){
+        for (i = 0 ; i < x ; i++){
+            for (j = 0 ; j < y ; j++){
                 Tsquare sq;
                 sq.kind = LDS_FREE;
                 sq.opt = LDS_OptNone;
-                labyrinthe->squares[j][i] = sq;
+                labyrinthe->squares[i][j] = sq;
             }
         }
     }
@@ -76,8 +74,8 @@ void initialize_size(int h, int w){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_in(int h, int w){
-    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
+void put_in(Tlds *labyrinthe, int x, int y){
+    if (x!=0 && x!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : entrée invalide !\n");
         exit(1);
     }
@@ -86,13 +84,13 @@ void put_in(int h, int w){
         exit(1);
     }
     else{
-        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
+        if ((labyrinthe->squares[x][y]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        (labyrinthe->squares[h][w]).kind = LDS_IN;
+        (labyrinthe->squares[x][y]).kind = LDS_IN;
         Tpoint pt;
-        pt.x = w;
-        pt.y = h;
+        pt.x = x;
+        pt.y = y;
         labyrinthe->in = pt;
         has_entry = 1;
     }
@@ -103,32 +101,28 @@ void put_in(int h, int w){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_out(int h, int w){
-    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
+void put_out(Tlds *labyrinthe, int x, int y){
+    if (x!=0 && x!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : sortie invalide !\n");
         exit(1);
     }
     else{
-        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
+        if ((labyrinthe->squares[x][y]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        (labyrinthe->squares[h][w]).kind = LDS_OUT;
+        (labyrinthe->squares[x][y]).kind = LDS_OUT;
     }
 }
 
 /* Fill multiple outputs */
-void fill_out(Tpoints *suite){
+void fill_out(Tlds *labyrinthe, Tpoints *suite){
     int n = suite->nb;
     int i;
     for (i = 0; i<n; i++){
         Tpoint a = suite->t[i];
-        put_out(a.y,a.x);
+        printf("%d%d",a.x,a.y);
+        put_out(labyrinthe, a.x,a.y);
     }
-}
-
-/* Print the current lab */
-void show_lab() {
-  lds_dump(labyrinthe, stdout);
 }
 
 /* Computes operations on Tvar */
@@ -170,7 +164,7 @@ void operation(char* var, int value, int opNb) {
 }
 
 /* Defines a magic door */
-void define_md(Tpoint src, Tpoint dst, Twr dir) {
+void define_md(Tlds* labyrinthe, Tpoint src, Tpoint dst, Twr dir) {
   Tsqmd* md = lds_sqmd_new(src);
   md->t[dir].chg = 0;
   md->t[dir].wrd = dir;
@@ -196,7 +190,12 @@ void update_square(Tlds* labyrinthe,TsquareOpt newOpt,int x,int y) {
     lds_draw_xy(labyrinthe,newOpt,x,y);
 }
 
+void show(Tlds *labyrinthe){
+    lds_dump(labyrinthe,stdout);
+}
 %}
+
+%parse-param {Tlds *ds}
 
 %token IDENT CNUM DIR
 %token SIZE IN OUT SHOW
@@ -242,9 +241,9 @@ suite_instr
 instr
   : ';'
   | instr_vars
-  | IN pt ';'  {put_in($2->y,$2->x);}
-  | OUT suite_pt ';' {fill_out($2);}
-  | SHOW {show_lab();}
+  | IN pt ';'  {put_in(ds,$2->x,$2->y);}
+  | OUT suite_pt ';' {fill_out(ds,$2);}
+  | SHOW {show(ds);}
   | constr ';' {
     int x,y;
     for(x=0;x < labyrinthe->dx;x++) {
@@ -259,12 +258,12 @@ instr
   | constr R F pt pt ';'
   | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
-  | MD pt DIR pt dest_list { define_md(*$2,*$4,$3); }
+  | MD pt DIR pt dest_list { define_md(ds,*$2,*$4,$3); }
 ;
 
 instr_size
-  : SIZE xcst ';' {initialize_size($2,$2);}
-  | SIZE xcst ',' xcst ';' {initialize_size($4,$2);}
+  : SIZE xcst ';' {initialize_size(ds,$2,$2);}
+  | SIZE xcst ',' xcst ';' {initialize_size(ds,$2,$4);}
 ;
 
 instr_vars
@@ -388,7 +387,7 @@ constr
 %%
 #include "lex.yy.c"
 
-void yyerror(const char* fmt, ...)
+void yyerror(Tlds *ds, const char* fmt, ...)
 {
     fprintf(stderr,"FATAL (line %d): %s (near %s)\n",yylineno,fmt,yytext);
     exit(1);

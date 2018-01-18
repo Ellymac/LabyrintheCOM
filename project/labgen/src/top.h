@@ -51,7 +51,7 @@ typedef enum {
     LG_DrawWall, LG_DrawUnwall, LG_DrawToggle
 } TdrawOpt;
 
-// wind rose 
+// wind rose
 typedef enum {
     LG_WrNN=0, LG_WrNE=1, LG_WrEE=2, LG_WrSE=3,
     LG_WrSS=4, LG_WrSW=5, LG_WrWW=6, LG_WrNW=7,
@@ -79,7 +79,7 @@ extern const char* gl_progname;  // base name of running program.
 extern const char* gl_infname;   // base name of input file name
 extern Tpdt* gl_pdt;             // parser private data
 extern Tlds* gl_lds;             // labyrinth data structure
-extern int   gl_warning;         // 0:do not print warnings  
+extern int   gl_warning;         // 0:do not print warnings
 
 /*======================================================================*/
 /*= top functions                                                      =*/
@@ -94,13 +94,19 @@ extern int   gl_warning;         // 0:do not print warnings
  * All functions return 0 on success and 1 on failure.
  * They print error messages on failure.
 **/
-extern int   yyparse();
+extern int   yyparse(Tlds *labyrinthe);
 extern void  lg_sem0(Tlds*ds, const Tpdt*pdt);
 extern int   lg_sem (Tlds*ds, const Tpdt*pdt);
 extern int   lg_gen (Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname);
 
 // It prints error messages like printf and then exits with 1 status
-extern void  yyerror(const char* fmt, ...);
+extern void  yyerror(Tlds *ds, const char* fmt, ...);
+
+extern void make_lex(FILE* lstream);
+extern char* int_case_to_string(int x);
+extern void define_direction();
+extern char* direction(Tlds*ds, int x, int y);
+extern char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir);
 
 /*======================================================================*/
 #endif // FILE_TOP_H

@@ -19,7 +19,6 @@
 
 const char* gl_progname;  // base name of running program.
 const char* gl_infname;   // base name of input file name
-Tpdt* gl_pdt;             // parser private data
 Tlds* gl_lds;             // labyrinth data structure
 int   gl_warning;         // 0:do not print warnings
 
@@ -79,26 +78,19 @@ int main(int argc, char*argv[])
     gl_infname = strdup(basename(p));
     free(p);
 
-    gl_pdt = pdt_new();
     gl_lds = lds_new();
 
     // parsing
     init_vars(); // init vars set
     extern FILE* yyin;
     yyin = param.instream;
-    if ( yyparse() )
+    if ( yyparse(gl_lds) )
         return 1; // mess. printed by yyparse
     fclose( param.instream );
-    //yydestroy();
-
-    // check semantique
-  /* TODO  if ( lg_sem(gl_lds, gl_pdt) )
-        return 1; // mess. printed by lg_sem
-    pdt_free( gl_pdt );*/
-
+    printf("bobo\n");
     // génération of labres lex & yacc codes
     // into lfname and yfname files
-    /*char  lfname[FNAME_SZ],  yfname[FNAME_SZ];
+    char  lfname[FNAME_SZ],  yfname[FNAME_SZ];
     char  lcfname[FNAME_SZ], ycfname[FNAME_SZ];
     FILE *lstream,         *ystream;
     sprintf(lfname,  "%s.l",     param.outfilename);
@@ -114,11 +106,11 @@ int main(int argc, char*argv[])
         fprintf(stderr,"%s: can not open %s file for writing: %s\n",
                 gl_progname,yfname,strerror(errno));
         exit(1);
-    }*/
-  /* TODO if ( lg_gen(gl_lds,lstream,ystream,lcfname) )
+    }
+  if ( lg_gen(gl_lds,lstream,ystream,lcfname) )
         return 1; // mess. printed by lg_gen
     fclose(lstream); fclose(ystream);
-    lds_free( gl_lds );*/
+    lds_free( gl_lds );
 
     // génération of labres from lfname (lex) and yfname (yacc) files
   /* TODO int status=0;
