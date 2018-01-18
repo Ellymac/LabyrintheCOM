@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "src/top.h"
+#include "src/expr.h"
 #include "src/vars.h"
 #include "src/points.h"
 #include "src/lds.h"
@@ -11,6 +12,7 @@ int yylex();
 
 int has_entry = 0;
 Tvars* vars;
+Tlds *labyrinthe;
 
 /* Init vars set */
 void init_vars() {
@@ -38,8 +40,7 @@ void add_var(char *var, int value){
     vars_chgOrAddEated(vars, var, value);
 }
 
-Tlds *labyrinthe;
-
+/* Init a Tpoint */
 Tpoint* init_pt(int x, int y){
     Tpoint* res = malloc(sizeof(struct _Tpoint));
     res->x = x;
@@ -59,8 +60,8 @@ void initialize_size(int h, int w){
         labyrinthe->dx = w;
         labyrinthe->dy = h;
         int i,j;
-        for (i = 0 ; i < h ; i++){
-            for (j = 0 ; j < w ; j++){
+        for (i = 0 ; i < h+1 ; i++){
+            for (j = 0 ; j < w+1 ; j++){
                 Tsquare sq;
                 sq.kind = LDS_FREE;
                 sq.opt = LDS_OptNone;
@@ -115,6 +116,7 @@ void put_out(int h, int w){
     }
 }
 
+/* Fill multiple outputs */
 void fill_out(Tpoints *suite){
     int n = suite->nb;
     int i;
@@ -122,6 +124,49 @@ void fill_out(Tpoints *suite){
         Tpoint a = suite->t[i];
         put_out(a.y,a.x);
     }
+}
+
+/* Print the current lab */
+void show_lab() {
+  lds_dump(labyrinthe, stdout);
+}
+
+/* Computes operations on Tvar */
+void operation(char* var, int value, int opNb) {
+  Tvar* getTvar = vars_getR(vars, var);
+  int newVal = getTvar->val;
+  printf("1 : %s = %d \n", getTvar->name, newVal);
+
+  switch(opNb) {
+    case 1 :
+      printf("--> %s = %s + %d \n", getTvar->name, getTvar->name, value);
+      newVal += value;
+
+      break;
+    case 2 :
+      newVal -= value;
+      printf("--> %s = %s - %d \n", getTvar->name, getTvar->name, value);
+
+      break;
+    case 3 :
+      newVal /= value;
+      printf("--> %s = %s / %d \n", getTvar->name, getTvar->name, value);
+
+      break;
+    case 4 :
+      newVal *= value;
+      printf("--> %s = %s * %d \n", getTvar->name, getTvar->name, value);
+
+      break;
+    case 5 :
+      newVal %= value;
+      printf("--> %s = %s %% %d \n", getTvar->name, getTvar->name, value);
+
+      break;
+  }
+
+  printf("2 : %s = %d \n\n", getTvar->name, newVal);
+  vars_chgOrAddEated(vars, var, newVal);
 }
 
 %}
@@ -137,11 +182,13 @@ void fill_out(Tpoints *suite){
 %union{
     int entier;
     Cstr id;
+    //Texpr* expr;
     Tpoint *pt;
     Tpoints *suite_pt;
     Tpoint3s *suite_pt_val;
 }
-%type<entier> CNUM expr
+%type<entier> CNUM xcst
+/*%type<expr> expr*/
 %type<id> IDENT
 %type<pt> pt
 %type<suite_pt> suite_pt
@@ -168,7 +215,7 @@ instr
   | instr_vars
   | IN pt ';'  {put_in($2->y,$2->x);}
   | OUT suite_pt ';' {fill_out($2);}
-  | SHOW
+  | SHOW {show_lab();}
   | constr ';'
   | constr PTA suite_pt ';'
   | constr PTD pt suite_pt_val ';'
@@ -180,19 +227,29 @@ instr
 ;
 
 instr_size
-  : SIZE expr ';' {initialize_size($2,$2);}
-  | SIZE expr ',' expr ';' {initialize_size($4,$2);}
+  : SIZE xcst ';' {initialize_size($2,$2);}
+  | SIZE xcst ',' xcst ';' {initialize_size($4,$2);}
 ;
 
 instr_vars
-  : IDENT '=' expr ';' {
-      add_var(u_strdup($1),$3);
+  : IDENT '=' xcst ';' {
+    add_var(u_strdup($1),$3);
   }
-  | IDENT PLUSE expr ';'
-  | IDENT MINUSE expr ';'
-  | IDENT MULTE expr ';'
-  | IDENT DIVE expr ';'
-  | IDENT MODE expr ';'
+  | IDENT PLUSE xcst ';' {
+    operation(u_strdup($1), $3, 1);
+  }
+  | IDENT MINUSE xcst ';' {
+    operation(u_strdup($1), $3, 2);
+  }
+  | IDENT DIVE xcst ';' {
+    operation(u_strdup($1), $3, 3);
+  }
+  | IDENT MULTE xcst ';' {
+    operation(u_strdup($1), $3, 4);
+  }
+  | IDENT MODE xcst ';' {
+    operation(u_strdup($1), $3, 5);
+  }
 ;
 
 suite_instr_vars
@@ -200,19 +257,32 @@ suite_instr_vars
   |
 ;
 
-expr
-  : CNUM
-  | IDENT {
-    $$ = check_var(u_strdup($1));
-  }
-  | expr '*' expr {$$ = $1 * $3;}
-  | expr '+' expr {$$ = $1 + $3;}
-  | expr '-' expr {$$ = $1 - $3;}
-  | expr '/' expr {$$ = $1 / $3;}
-  | expr '%' expr {$$ = $1 % $3;}
-  | '(' expr ')' {$$ = $2;}
-  | '+' expr {$$ = $2;}
-  | '-' expr {$$ = -$2;}
+/*expr
+  : CNUM { $$ = expr_cst($1); }
+  | IDENT { $$ = expr_varEated(u_strdup($1)); }
+  | expr '*' expr { $$ = expr_binOp(EXPKD_TIME, $1, $3); }
+  | expr '+' expr { $$ = expr_binOp(EXPKD_PLUS, $1, $3); }
+  | expr '-' expr { $$ = expr_binOp(EXPKD_MINUS, $1, $3); }
+  | expr '/' expr { $$ = expr_binOp(EXPKD_DIV, $1, $3); }
+  | expr '%' expr { $$ = expr_binOp(EXPKD_MOD, $1, $3); }
+  | '(' expr ')' { $$ = expr_uniOp(EXPKD_NONE, $2); }
+  | '+' expr { $$ = expr_uniOp(EXPKD_NONE, $2); }
+  | '-' expr { $$ = expr_uniOp(EXPKD_NEG, $2); }
+;*/
+
+xcst
+	: CNUM { $$ = $1; }
+	| IDENT {
+      $$ = check_var(u_strdup($1));
+		}
+	| xcst '+' xcst	{ $$ = $1 + $3;	}
+	| xcst '-' xcst	{ $$ = $1 - $3;	}
+	| xcst '*' xcst	{ $$ = $1 * $3;	}
+	| xcst '/' xcst	{ $$ = $1 / $3;	}
+	| xcst '%' xcst	{ $$ = $1 % $3;	}
+	| '+' xcst { $$ = $2; }
+	| '-' xcst { $$ = - $2; }
+	| '(' xcst ')' { $$ = $2; }
 ;
 
 for_args
@@ -221,14 +291,14 @@ for_args
 ;
 
 pt
-  : '(' expr ',' expr ')' {$$ = init_pt($2,$4);}
+  : '(' xcst ',' xcst ')' {$$ = init_pt($2,$4);}
 ;
 
 range
-  :'[' expr ':' expr ']'
-  |'[' expr ':' expr '['
-  |'[' expr ':' expr ':' expr ']'
-  |'[' expr ':' expr ':' expr '['
+  :'[' xcst ':' xcst ']'
+  |'[' xcst ':' xcst '['
+  |'[' xcst ':' xcst ':' xcst ']'
+  |'[' xcst ':' xcst ':' xcst '['
 ;
 
 suite_pt
@@ -253,7 +323,7 @@ On définit un pt_val comme un Tpoint3s
 **/
 pt_val
   : pt {$$ = pt3s_new_p2z(*$1,0);}
-  | pt ':' expr {
+  | pt ':' xcst {
       $$ = pt3s_new();
       int i;
       for (i = 0 ; i < $3 ; i++){
