@@ -48,19 +48,19 @@ Tpoint* init_pt(int x, int y){
 }
 
 /* Initialize labyrinth's size */
-void initialize_size(int h, int w){
-    if (h < 2 || w < 2){
+void initialize_size(int x, int y){
+    if (x < 2 || y < 2){
         printf("Erreur : taille invalide !\n");
         exit(1);
     }
     else{
       /** à réfléchir tout à l'heure */
         labyrinthe = lds_new();
-        labyrinthe->dx = w;
-        labyrinthe->dy = h;
+        labyrinthe->dx = x;
+        labyrinthe->dy = y;
         int i,j;
-        for (i = 0 ; i < h+1 ; i++){
-            for (j = 0 ; j < w+1 ; j++){
+        for (i = 0 ; i < x ; i++){
+            for (j = 0 ; j < y ; j++){
                 Tsquare sq;
                 sq.kind = LDS_FREE;
                 sq.opt = LDS_OptNone;
@@ -75,8 +75,8 @@ void initialize_size(int h, int w){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_in(int h, int w){
-    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
+void put_in(int x, int y){
+    if (x!=0 && x!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : entrée invalide !\n");
         exit(1);
     }
@@ -85,13 +85,13 @@ void put_in(int h, int w){
         exit(1);
     }
     else{
-        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
+        if ((labyrinthe->squares[x][y]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        (labyrinthe->squares[h][w]).kind = LDS_IN;
+        (labyrinthe->squares[x][y]).kind = LDS_IN;
         Tpoint pt;
-        pt.x = w;
-        pt.y = h;
+        pt.x = x;
+        pt.y = y;
         labyrinthe->in = pt;
         has_entry = 1;
     }
@@ -102,16 +102,16 @@ void put_in(int h, int w){
 TODO ajouter une condition pour vérifier les entrées/sorties
     des trous de vers
 */
-void put_out(int h, int w){
-    if (h!=0 && h!=labyrinthe->dy && w!=0 && w!=labyrinthe->dx){
+void put_out(int x, int y){
+    if (x!=0 && y!=labyrinthe->dx-1 && y!=0 && y!=labyrinthe->dy-1){
         printf("Erreur : sortie invalide !\n");
         exit(1);
     }
     else{
-        if ((labyrinthe->squares[h][w]).kind == LDS_WALL){
+        if ((labyrinthe->squares[x][y]).kind == LDS_WALL){
             printf("Attention : présence d'un mur (supprimé) \n");
         }
-        (labyrinthe->squares[h][w]).kind = LDS_OUT;
+        (labyrinthe->squares[x][y]).kind = LDS_OUT;
     }
 }
 
@@ -120,7 +120,7 @@ void fill_out(Tpoints *suite){
     int i;
     for (i = 0; i<n; i++){
         Tpoint a = suite->t[i];
-        put_out(a.y,a.x);
+        put_out(a.x,a.y);
     }
 }
 void show(){
@@ -168,9 +168,9 @@ suite_instr
 instr
   : ';'
   | instr_vars
-  | IN pt ';'  {put_in($2->y,$2->x);}
+  | IN pt ';'  {put_in($2->x,$2->y);}
   | OUT suite_pt ';' {fill_out($2);}
-  | SHOW
+  | SHOW {show();}
   | constr ';'
   | constr PTA suite_pt ';'
   | constr PTD pt suite_pt_val ';'
@@ -183,7 +183,7 @@ instr
 
 instr_size
   : SIZE expr ';' {initialize_size($2,$2);}
-  | SIZE expr ',' expr ';' {initialize_size($4,$2);}
+  | SIZE expr ',' expr ';' {initialize_size($2,$4);}
 ;
 
 instr_vars
