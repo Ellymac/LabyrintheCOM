@@ -87,7 +87,6 @@ int main(int argc, char*argv[])
     if ( yyparse(gl_lds) )
         return 1; // mess. printed by yyparse
     fclose( param.instream );
-    printf("bobo\n");
     // génération of labres lex & yacc codes
     // into lfname and yfname files
     char  lfname[FNAME_SZ],  yfname[FNAME_SZ];

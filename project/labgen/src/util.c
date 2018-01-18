@@ -68,7 +68,7 @@ extern void u_warning(const char*fmt,...) // like printf, return always 1
 }
 
 extern void make_lex(FILE* lstream){
-  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n    { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %%s-near %s-\n\",\n          infname,yylineno,mess,yytext);\n  exit(1);\n}";
+  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n    { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %s-near %s-\\n\",infname,yylineno,mess,yytext);\n  exit(1);\n}";
   if (-1 == fwrite(lex, strlen(lex), 1,lstream)){
       fprintf(stderr,"Fail with write");
       exit(1);
@@ -185,16 +185,14 @@ extern char* direction_aux(Tlds* ds, int new_x, int new_y, char *dir){
             }
         }
     }
-    printf("%s : %s\n",dir, line);
     return line;
 }
 
 extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
 {
     define_direction();
-    printf("%s",dir_tab[0]);
     make_lex(lstream);
-    char *deb = "#define STATUS_GOOD 0\n\nstatic const char* infname;\n%}\n%token TK_ERROR TK_EOF\n%token TK_N  TK_S  TK_E  TK_W\n%token TK_NE TK_NW TK_SE TK_SW\n\n%start sortie\n\n%%\n";
+    char *deb = "%{\n#define STATUS_GOOD 0\n\nstatic const char* infname;\n%}\n%token TK_ERROR TK_EOF\n%token TK_N  TK_S  TK_E  TK_W\n%token TK_NE TK_NW TK_SE TK_SW\n\n%start sortie\n\n%%\n";
     if (-1 == fwrite(deb, strlen(deb), 1,ystream)){
         fprintf(stderr,"Fail with write");
         exit(1);
@@ -203,7 +201,7 @@ extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
     char *x_e = int_case_to_string(entree.x);
     char *y_e = int_case_to_string(entree.y);
     char *entree_str = calloc(400,sizeof(char));
-    sprintf(entree_str,"sortie : SG_%s_%s { return STATUS_GOOD; };\n",x_e,y_e);
+    sprintf(entree_str,"sortie : SQ_%s_%s { return STATUS_GOOD; };\n",x_e,y_e);
     if (-1 == fwrite(entree_str, strlen(entree_str), 1,ystream)){
         fprintf(stderr,"Fail with write");
         exit(1);
@@ -213,12 +211,10 @@ extern int lg_gen(Tlds*ds, FILE* lstream, FILE*ystream, Cstr lcfname)
     free(y_e);
     int x = ds->dx;
     int y = ds->dy;
-    printf("%d,%d",x,y);
     int i,j;
     for (i = 0 ; i < x ; i++){
         for (j = 0 ; j < y ; j++){
                 char *dir_str = direction(ds,i,j);
-                printf("(%d,%d) : %s\n",i,j,dir_str);
                 if (strcmp("",dir_str) == 0){
 
                 }
