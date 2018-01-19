@@ -112,7 +112,7 @@ int main(int argc, char*argv[])
     lds_free( gl_lds );
 
     // génération of labres from lfname (lex) and yfname (yacc) files
-  /* TODO int status=0;
+  int status=0;
     char cmd[4*FNAME_SZ+100];
     sprintf(cmd,"bison -o %s %s 2>/dev/null",ycfname,yfname);
     if ( system(cmd)!=0 )
@@ -138,7 +138,7 @@ int main(int argc, char*argv[])
             gl_progname,param.outfilename);
     free( (char*)gl_progname );
     free( (char*)gl_infname );
-    return status;*/
+    return status;
     return 0;
 }
 
