@@ -173,6 +173,9 @@ void define_md(Tlds* labyrinthe, Tpoint src, Tpoint dst, Twr dir) {
   md->t[dir].dest = dst;
   labyrinthe->squares[src.x][src.y].opt = LDS_OptMD;
   labyrinthe->squares[src.x][src.y].sq_mdp = md;
+  labyrinthe->squares[dst.x][dst.y].opt = LDS_OptMD;
+  labyrinthe->squares[dst.x][dst.y].sq_mdp = lds_sqmd_new(dst);
+
 }
 
 /* Draws in a square if not an input or output */
@@ -273,12 +276,24 @@ instr
       lds_draw_xy(ds, $1, i, max.y);
     }
 
-    for(i = min.y; i < max.y; i++) {
+    for(i = min.y; i <= max.y; i++) {
       lds_draw_xy(ds, $1, min.x, i);
       lds_draw_xy(ds, $1, max.x, i);
     }
   }
-  | constr R F pt pt ';'
+  | constr R F pt pt ';' {
+    Tpoint min = (Tpoint){MIN($4->x, $5->x), MIN($4->y, $5->y)};
+    Tpoint max = (Tpoint){MAX($4->x, $5->x), MAX($4->y, $5->y)};
+
+    int x,y;
+    for(x = min.x; x <= max.x; x++) {
+      for(y = min.y; y <= max.y; y++) {
+        lds_draw_xy(ds, $1, x, y);
+      }
+    }
+
+
+  }
   | constr FOR for_args pt ';'
   | WH pt ARROW pt pt_arrow
   | MD pt DIR pt dest_list { define_md(ds,*$2,*$4,$3); }
