@@ -3,7 +3,7 @@
 
 %%
 [0-9]+ {yylval.entier = atoi(yytext); return CNUM;}
-(N|E|S|W|NE|NW|SE|SW) { return DIR;}
+("N"|"E"|"S"|"W"|"NE"|"NW"|"SE"|"SW") {yylval.dir = strdup(yytext); return DIR;}
 SIZE {return SIZE;}
 IN {return IN;}
 OUT {return OUT;}

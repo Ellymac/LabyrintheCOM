@@ -37,7 +37,10 @@ typedef struct _TsqmdEle {
 typedef struct _Tsqmd {
     TsqmdEle t[LG_WrNb]; // where to go for every wind rose direction
 } Tsqmd;
-
+typedef struct _listTsqmEle {
+    int nb;
+    TsqmdEle t[100];
+} listTsqmEle;
 // Labyrinth square
 typedef struct _Tsquare {
     TsquareKind kind; // LDS_FREE, LDS_WALL LDS_IN

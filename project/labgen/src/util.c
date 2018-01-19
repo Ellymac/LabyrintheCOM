@@ -68,7 +68,7 @@ extern void u_warning(const char*fmt,...) // like printf, return always 1
 }
 
 extern void make_lex(FILE* lstream){
-  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n    { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %s-near %s-\\n\",infname,yylineno,mess,yytext);\n  exit(1);\n}";
+  char *lex = "%{\nint wall=1;\nint eof=0;\n%}\n%option noyywrap\n%option yylineno\n%%\nN {return TK_N;}\nS {return TK_S;}\nW {return TK_W;}\nE {return TK_E;}\nNE {return TK_NE;}\nNW {return TK_NW;}\nSE {return TK_SE;}\nSW {return TK_SW;}\n[ \\t\\n]    ;\n.          { wall=0; return TK_ERROR; }\n <<EOF>> { eof=1; return TK_EOF; }\n%%\nvoid yyerror(const char* mess)\n{\n  if ( eof==1 || wall==1 )\n      mess = \"perdu\";\n  fprintf(stderr,\"%s:%d: %s-near %s-\\n\",infname,yylineno,mess,yytext);\n  exit(1);\n}";
   if (-1 == fwrite(lex, strlen(lex), 1,lstream)){
       fprintf(stderr,"Fail with write");
       exit(1);
@@ -110,16 +110,24 @@ extern char* direction(Tlds*ds, int x, int y){
     char *line = calloc(400,sizeof(char));
     char *x_str;
     char *y_str;
+    char *tmp;
     x_str = int_case_to_string(x);
     y_str = int_case_to_string(y);
     sprintf(line,"SQ_%s_%s :",x_str,y_str);
     Tsquare ts = ds->squares[x][y];
     if (ts.opt == LDS_OptMD){
-
+        Tsqmd* mdp = ts.u.mdp;
+        int i;
+        for (i = 0 ; i < LG_WrNb ; i++){
+            Tpoint tpoint = mdp->t[i].dest;
+            tmp = tmp = direction_aux(ds,tpoint.x,tpoint.y,dir_tab[i]);
+            if (strcmp(tmp,"") != 0){
+                sprintf(line,"%s%s|",line,tmp);
+            }
+        }
     }
     else{
         int i;
-        char *tmp;
         tmp = direction_aux(ds,x,y-1,dir_tab[0]);
         if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
@@ -152,6 +160,9 @@ extern char* direction(Tlds*ds, int x, int y){
         if (strcmp(tmp,"") != 0){
             sprintf(line,"%s%s|",line,tmp);
         }
+    }
+    if (ts.kind == LDS_OUT){
+        sprintf(line,"%sTK_EOF|",line);
     }
     int nb = strlen(line);
     if (line[nb-1] == ':'){
